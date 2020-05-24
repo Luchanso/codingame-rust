@@ -60,39 +60,46 @@ pub struct Play {
 }
 
 pub fn solve(cash: i32, rounds: Vec<Play>) -> i32 {
-    let mut result = cash;
-    const WIN_CASH: i32 = 100;
-    const LOSE_CASH: i32 = -100;
-    const STREAK_CASH: i32 = 3500;
+    let mut result_cash = cash;
+    const WIN_CASH_RATIO: i32 = 1;
+    const LOSE_CASH_RATIO: i32 = -1;
+    const STREAK_CASH_RATIO: i32 = 35;
+    const BET_RATIO: f32 = 0.25;
 
     for round in rounds {
-        result = result
+        result_cash = result_cash
             + match round.call {
                 Call::Even => {
-                    if round.ball % 2 == 0 {
-                        WIN_CASH
+                    if round.ball == 0 {
+                        calculate_bet(result_cash, BET_RATIO, LOSE_CASH_RATIO)
+                    } else if round.ball % 2 == 0 {
+                        calculate_bet(result_cash, BET_RATIO, WIN_CASH_RATIO)
                     } else {
-                        LOSE_CASH
+                        calculate_bet(result_cash, BET_RATIO, LOSE_CASH_RATIO)
                     }
                 }
                 Call::Odd => {
                     if round.ball % 2 != 0 {
-                        WIN_CASH
+                        calculate_bet(result_cash, BET_RATIO, WIN_CASH_RATIO)
                     } else {
-                        LOSE_CASH
+                        calculate_bet(result_cash, BET_RATIO, LOSE_CASH_RATIO)
                     }
                 }
                 Call::Plain => {
                     if round.ball == round.target.unwrap() {
-                        STREAK_CASH
+                        calculate_bet(result_cash, BET_RATIO, STREAK_CASH_RATIO)
                     } else {
-                        LOSE_CASH
+                        calculate_bet(result_cash, BET_RATIO, LOSE_CASH_RATIO)
                     }
                 }
             }
     }
 
-    return result;
+    return result_cash;
+}
+
+pub fn calculate_bet(cash: i32, bet_ratio: f32, win_lose_ratio: i32) -> i32 {
+    (((cash as f32) * bet_ratio).ceil() as i32) * win_lose_ratio
 }
 
 #[cfg(test)]
@@ -110,7 +117,7 @@ mod tests {
                     target: None
                 }]
             ),
-            1100
+            1250
         );
         assert_eq!(
             solve(
@@ -121,7 +128,7 @@ mod tests {
                     target: None
                 }]
             ),
-            900
+            750
         );
     }
 
@@ -136,7 +143,7 @@ mod tests {
                     target: None
                 }]
             ),
-            900
+            750
         );
         assert_eq!(
             solve(
@@ -147,7 +154,7 @@ mod tests {
                     target: None
                 }]
             ),
-            1100
+            1250
         );
     }
 
@@ -162,7 +169,7 @@ mod tests {
                     target: Some(10)
                 }]
             ),
-            4500
+            9750
         );
         assert_eq!(
             solve(
@@ -173,8 +180,60 @@ mod tests {
                     target: Some(10)
                 }]
             ),
-            900
+            750
         );
+    }
+
+    #[test]
+    fn should_round_up() {
+        assert_eq!(
+            solve(
+                333,
+                vec![Play {
+                    ball: 10,
+                    call: Call::Even,
+                    target: None
+                }]
+            ),
+            417
+        );
+        assert_eq!(
+            solve(
+                333,
+                vec![Play {
+                    ball: 9,
+                    call: Call::Odd,
+                    target: None
+                }]
+            ),
+            417
+        );
+        assert_eq!(
+            solve(
+                333,
+                vec![Play {
+                    ball: 9,
+                    call: Call::Plain,
+                    target: Some(9)
+                }]
+            ),
+            3_273
+        );
+    }
+
+    #[test]
+    fn zero_is_not_even() {
+        assert_eq!(
+            solve(
+                1000,
+                vec![Play {
+                    ball: 0,
+                    call: Call::Even,
+                    target: None
+                }]
+            ),
+            750
+        )
     }
 
     #[test]
